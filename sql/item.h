@@ -678,10 +678,12 @@ typedef void (*Cond_traverser) (const Item *item, void *arg);
 class Item : public Parse_tree_node
 {
   typedef Parse_tree_node super;
-
   friend class udf_handler;
   virtual bool is_expensive_processor(uchar *) { return false; }
-
+  THD* m_thd; //InfiniDB
+public:
+  THD* thd() {return m_thd;}
+  String *val_str() {return val_str(&str_value);}
 protected:
   /**
      Sets the result value of the function an empty string, using the current
@@ -2474,7 +2476,8 @@ public:
     max_length= char_to_byte_length_safe(max_char_length_arg,
                                          collation.collation->mbmaxlen);
   }
-
+    bool too_big_for_varchar() const
+  { return max_char_length() > CONVERT_IF_BIGGER_TO_BLOB; }
   /*
     Return TRUE if the item points to a column of an outer-joined table.
   */
@@ -2665,6 +2668,7 @@ public:
     one of the returned columns could be null, or if the subquery
     could return zero rows.
   */
+  char * name;                  //name from select
   bool maybe_null;
   bool null_value;              ///< True if item is null
   bool unsigned_flag;

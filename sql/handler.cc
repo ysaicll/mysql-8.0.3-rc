@@ -998,6 +998,25 @@ static bool closecon_handlerton(THD *thd, plugin_ref plugin,
 {
   handlerton *hton= plugin_data<handlerton*>(plugin);
   /*
+  Not all storage engines can handle a close_connection() on startup, so...
+  There's got to be a better way to do this. ha_resolve_by_name() doesn't seem to work.
+  This can be removed when we use THD::ha_data instead of infinidb_vtable
+  */
+  #if (defined(_MSC_VER) && defined(_DEBUG)) || defined(SAFE_MUTEX)
+  if ((*plugin)->name.length == 8 && strncmp((*plugin)->name.str, "InfiniDB", 8) == 0)
+  #else
+  if (plugin->name.length == 8 && strncmp(plugin->name.str, "InfiniDB", 8) == 0)
+  #endif
+  {
+    if (hton->state == SHOW_OPTION_YES && hton->close_connection)
+    {
+      hton->close_connection(hton, thd);
+    }
+  }
+  else
+  {
+
+  /*
     there's no need to rollback here as all transactions must
     be rolled back already
   */
@@ -1008,6 +1027,7 @@ static bool closecon_handlerton(THD *thd, plugin_ref plugin,
     /* make sure ha_data is reset and ha_data_lock is released */
     thd_set_ha_data(thd, hton, NULL);
   }
+}
   return FALSE;
 }
 
@@ -1745,7 +1765,15 @@ int ha_commit_trans(THD *thd, bool all, bool ignore_global_read_lock)
                       DBUG_SUICIDE();
                     });
   }
-
+    /*
+    We must not commit the normal transaction if a statement
+    transaction is pending. Otherwise statement transaction
+    flags will not get propagated to its normal transaction's
+    counterpart.
+    */
+  if (thd->infinidb_vtable.vtable_state != THD::INFINIDB_ALTER_VTABLE && thd->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE)
+     DBUG_ASSERT(!trn_ctx->is_active(Transaction_ctx::STMT) || !all);
+  
   if (thd->in_sub_stmt)
   {
     DBUG_ASSERT(0);

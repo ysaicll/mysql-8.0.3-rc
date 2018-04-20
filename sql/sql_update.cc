@@ -990,6 +990,11 @@ bool Sql_cmd_update::update_single_table(THD *thd)
                     {
                       thd->killed= THD::KILL_QUERY;
                     };);
+   // @InfiniDB. Add isInfiniDBDML to make sure it's InfiniDB dml stmt.
+    if (thd->infinidb_vtable.isInfiniDBDML && thd->is_error())
+  {
+      error= 1;
+  }
     if (killed_status != THD::NOT_KILLED)
       error= 1;
   
@@ -1080,7 +1085,11 @@ bool Sql_cmd_update::update_single_table(THD *thd)
     my_snprintf(buff, sizeof(buff), ER_THD(thd, ER_UPDATE_INFO),
                 (long) found_rows, (long) updated_rows,
                 (long) thd->get_stmt_da()->current_statement_cond_count());
-    my_ok(thd, thd->get_protocol()->has_client_capability(CLIENT_FOUND_ROWS) ?
+   //@Infinidb found and updated aren't correct for UPDATE. Use row_count_func instead.
+    if ((thd->infinidb_vtable.isInfiniDBDML))
+       my_ok(thd, thd->get_row_count_func(), id, buff);
+    else
+        my_ok(thd, thd->get_protocol()->has_client_capability(CLIENT_FOUND_ROWS) ?
           found_rows : updated_rows, id, buff);
     DBUG_PRINT("info",("%ld records updated", (long) updated_rows));
   }
@@ -2701,7 +2710,7 @@ err:
 bool Query_result_update::send_eof()
 {
   char buff[STRING_BUFFER_USUAL_SIZE];
-  ulonglong id;
+  ulonglong id= 0;
   THD::killed_state killed_status= THD::NOT_KILLED;
   DBUG_ENTER("Query_result_update::send_eof");
   THD_STAGE_INFO(thd, stage_updating_reference_tables);
@@ -2761,15 +2770,23 @@ bool Query_result_update::send_eof()
 	       MYF(0));
     DBUG_RETURN(true);
   }
-
-  id= thd->arg_of_last_insert_id_function ?
+    id= id + 0;
+    id= thd->arg_of_last_insert_id_function ?
     thd->first_successful_insert_id_in_prev_stmt : 0;
   thd->current_changed_rows= updated_rows;
 
   my_snprintf(buff, sizeof(buff), ER_THD(thd, ER_UPDATE_INFO),
               (long) found_rows, (long) updated_rows,
               (long) thd->get_stmt_da()->current_statement_cond_count());
+      //@Infinidb don't set row count on thd to push row count to the front
+      /*----wait to check if necessary
+        longlong row_count_func = 0;
+	if (thd->infinidb_vtable.isInfiniDBDML)
+	  row_count_func = thd->get_row_count_func();
+	else
+	  row_count_func = (thd->client_capabilities & CLIENT_FOUND_ROWS) ? found_rows : updated_rows;
   ::my_ok(thd, thd->get_protocol()->has_client_capability(CLIENT_FOUND_ROWS) ?
           found_rows : updated_rows, id, buff);
+       -----*/
   DBUG_RETURN(false);
 }

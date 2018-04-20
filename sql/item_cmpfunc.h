@@ -1662,6 +1662,8 @@ public:
   const CHARSET_INFO *compare_collation() const override
   { return cmp_collation.collation; }
   void cleanup() override;
+  //InfiniDB
+  int get_first_expr_num() { return first_expr_num; }
 };
 
 /**
@@ -1920,7 +1922,8 @@ class Item_func_like final : public Item_bool_func2
 
   bool escape_evaluated;  ///< Tells if the escape clause has been evaluated.
   bool eval_escape_clause(THD *thd);
-
+public:
+  bool negated;
 public:
   int escape;
 

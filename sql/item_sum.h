@@ -1982,6 +1982,8 @@ public:
   Item_func_group_concat(THD *thd, Item_func_group_concat *item);
   ~Item_func_group_concat();
 
+
+  enum_field_types field_type() const;
   bool itemize(Parse_context *pc, Item **res) override;
   void cleanup() override;
 
@@ -2503,6 +2505,11 @@ private:
 */
 class Item_func_grouping: public Item_int_func
 {
+  bool distinct;
+  uint arg_count_field;
+  uint arg_count_order;
+  String *separator;
+  ORDER **order;
 public:
   Item_func_grouping(const POS &pos, PT_item_list *a): Item_int_func(pos,a) {}
   const char * func_name() const override { return "grouping"; }
@@ -2518,6 +2525,12 @@ public:
       set_aggregation();
   }
   void cleanup() override;
+// @InfiniDB added interface
+  bool isDistinct() { return distinct; }
+  uint count_field() { return arg_count_field; }
+  uint order_field() { return arg_count_order; }
+  String* str_separator() { return separator; }
+  ORDER** get_order() { return order; }
 };
 
 #endif /* ITEM_SUM_INCLUDED */
