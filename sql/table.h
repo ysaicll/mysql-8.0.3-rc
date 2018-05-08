@@ -1555,6 +1555,28 @@ public:
   void mark_generated_columns(bool is_update);
   bool is_field_used_by_generated_columns(uint field_index);
   void mark_gcol_in_maps(Field *field);
+  // @Infinidb if this is InfiniDB table.
+  inline bool isInfiniDB()
+  {
+  /* Sometimes for internal temporary table, e.g.,
+   derived table, the s structure is not fully initialized.
+   However, it can never be infinidb table in such case,
+   therefore false to be ruturned.*/
+  if (!s || s->table_category == TABLE_CATEGORY_TEMPORARY)
+      return false;
+	if (s && s->db_plugin)
+	{
+#if (defined(_MSC_VER) && defined(_DEBUG)) || defined(SAFE_MUTEX)
+		if ((strcmp((*s->db_plugin)->name.str, "Columnstore") == 0) ||
+			(strcmp((*s->db_plugin)->name.str, "InfiniDB") == 0))
+#else
+		if ((strcmp(s->db_plugin->name.str, "Columnstore") == 0) ||
+			(strcmp(s->db_plugin->name.str, "InfiniDB") == 0))
+#endif
+	  return true;
+	}
+    return false;
+  }
   inline void column_bitmaps_set(MY_BITMAP *read_set_arg,
                                  MY_BITMAP *write_set_arg)
   {
@@ -2918,7 +2940,7 @@ struct TABLE_LIST
   LEX_CSTRING target_tablespace_name;
   char *schema_table_name;
   char *option;                /* Used by cache index  */
-
+  Item *on_expr;		/* Used with outer join */
   /** Table level optimizer hints for this table.  */
   Opt_hints_table *opt_hints_table;
   /* Hints for query block of this table. */
@@ -3007,7 +3029,7 @@ public:
     can see this lists can't be merged)
   */
   TABLE_LIST	*correspondent_table;
-private:
+public:
   /**
      This field is set to non-null for derived tables and views. It points
      to the SELECT_LEX_UNIT representing the derived table/view.
@@ -3042,7 +3064,7 @@ public:
   /* link to select_lex where this table was used */
   SELECT_LEX *select_lex;
 
-private:
+public:
   LEX *view;                    /* link on VIEW lex for merging */
 
 public:

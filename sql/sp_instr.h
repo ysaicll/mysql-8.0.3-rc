@@ -517,7 +517,7 @@ public:
     return false;
   }
 
-private:
+public: //support InfiniDB
   /// Complete query of the SQL-statement.
   LEX_STRING m_query;
 

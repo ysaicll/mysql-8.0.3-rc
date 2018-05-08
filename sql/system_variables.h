@@ -18,7 +18,7 @@
 
 #include <stddef.h>
 #include <sys/types.h>
-
+#include "include/sql_string.h"
 #include "m_ctype.h"
 #include "my_base.h"          // ha_rows
 #include "my_inttypes.h"
@@ -214,6 +214,27 @@ struct System_variables
   ulong trans_prealloc_size;
   ulong group_concat_max_len;
 
+/* InfiniDB TODO Move these to API*/
+  ulong infinidb_vtable_mode;
+  ulong infinidb_decimal_scale;
+  bool infinidb_use_decimal_scale;
+  bool infinidb_ordered_only;
+  ulong infinidb_string_scan_threshold;
+  ulong infinidb_compression_type;
+  ulong infinidb_stringtable_threshold;
+  ulong infinidb_diskjoin_smallsidelimit;
+  ulong infinidb_diskjoin_largesidelimit;
+  ulong infinidb_diskjoin_bucketsize;
+  ulong infinidb_um_mem_limit;
+  bool infinidb_varbin_always_hex;
+  bool infinidb_double_for_decimal_math;
+  ulong infinidb_local_query;
+  bool infinidb_use_import_for_batchinsert;
+  ulong infinidb_import_for_batchinsert_delimiter;
+  ulong infinidb_import_for_batchinsert_enclosed_by;
+  bool sql_log_bin_off = false;
+/* InfiniDB */
+
   ulong binlog_format; ///< binlog format for this thd (see enum_binlog_format)
   ulong rbr_exec_mode_options; // see enum_rbr_exec_mode
   bool binlog_direct_non_trans_update;
@@ -394,6 +415,7 @@ struct System_status_var
   double last_query_cost;
   ulonglong last_query_partial_plans;
 };
+
 
 /*
   This must reference the LAST ulonglong variable in system_status_var that is

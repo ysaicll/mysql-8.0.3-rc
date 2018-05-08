@@ -4411,6 +4411,27 @@ bool prepare_create_field(THD *thd, HA_CREATE_INFO *create_info,
                               sql_field->field_name))
       DBUG_RETURN(true);
 
+  //InfiniDB:Trim trailing spaces for vtable
+  if (thd->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE)
+    {
+      char* tmp = (char*)sql_field->field_name;
+
+      for (int i = strlen(tmp)-1; i >=0; i--)
+      {
+        if (tmp[i] == ' ')
+        {
+          tmp[i] = 0;
+        }
+        else
+          break;
+      } 
+    }
+   //InfiniDB: Skip the column name checking for vtable creation.
+   else if (check_column_name(sql_field->field_name))
+    {
+      my_error(ER_WRONG_COLUMN_NAME, MYF(0), sql_field->field_name);
+      DBUG_RETURN(TRUE);
+    }
   /* Check if we have used the same field name before */
   Create_field *dup_field;
   List_iterator<Create_field> it(*create_list);
@@ -4420,6 +4441,14 @@ bool prepare_create_field(THD *thd, HA_CREATE_INFO *create_info,
                       sql_field->field_name,
                       dup_field->field_name) == 0)
     {
+       //InfiniDB Ignore duplicate field name error for now. Adjust the field name in get_plan and redo phase 1.
+       if (thd->infinidb_vtable.vtable_state == THD::INFINIDB_CREATE_VTABLE ||
+      		thd->infinidb_vtable.vtable_state == THD::INFINIDB_ALTER_VTABLE ||
+      		thd->infinidb_vtable.vtable_state == THD::INFINIDB_REDO_PHASE1 ||
+      		thd->infinidb_vtable.vtable_state == THD::INFINIDB_REDO_QUERY)
+      	{
+      		break;
+      	}
       /*
         If this was a CREATE ... SELECT statement, accept a field
         redefinition if we are changing a field in the SELECT part
@@ -14284,6 +14313,9 @@ copy_data_between_tables(THD * thd,
       tables.alias= tables.table_name= from->s->table_name.str;
       tables.db= from->s->db.str;
       error= 1;
+      //InfiniDB
+      if (!(thd->infinidb_vtable.vtable_state == THD::INFINIDB_ALTER_VTABLE))
+          THD_STAGE_INFO(thd, stage_sorting);
 
       Column_privilege_tracker column_privilege(thd, SELECT_ACL);
 
@@ -14301,8 +14333,10 @@ copy_data_between_tables(THD * thd,
       from->sort.found_records= returned_rows;
     }
   };
-
-  /* Tell handler that we have values for all columns in the to table */
+   //InfiniDB TODO. Make entering stage info work with alter vtable state.
+   if (!(thd->infinidb_vtable.vtable_state == THD::INFINIDB_ALTER_VTABLE))
+    THD_STAGE_INFO(thd, stage_copy_to_tmp_table);
+   /* Tell handler that we have values for all columns in the to table */
   to->use_all_columns();
   if (init_read_record(&info, thd, from, NULL, 1, 1, FALSE))
   {
@@ -14368,7 +14402,13 @@ copy_data_between_tables(THD * thd,
       error= 1;
       break;
     }
-
+    
+    if (!(thd->infinidb_vtable.vtable_state == THD::INFINIDB_ALTER_VTABLE)) // @InfiniDB
+  {
+    THD_STAGE_INFO(thd, stage_enabling_keys);
+   // thd_progress_next_stage(thd);
+  }
+    
     error=to->file->ha_write_row(to->record[0]);
     to->auto_increment_field_not_null= FALSE;
     if (error)

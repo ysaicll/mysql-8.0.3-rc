@@ -992,7 +992,8 @@ public:
 
 class Item_char_typecast final : public Item_str_func
 {
-  longlong cast_length;
+  uint cast_length;
+  //longlong cast_length;
   const CHARSET_INFO *cast_cs, *from_cs;
   bool charset_conversion;
   String tmp_value;
@@ -1010,6 +1011,7 @@ public:
   String *val_str(String *a) override;
   bool resolve_type(THD *) override;
   void print(String *str, enum_query_type query_type) override;
+  int castLength() { return (int) cast_length; }
 };
 
 

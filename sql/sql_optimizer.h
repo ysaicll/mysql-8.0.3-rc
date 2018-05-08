@@ -428,7 +428,8 @@ public:
     constant table
   */
   bool group_optimized_away;
-
+  //InfiniDB
+  bool exec_infinidb();
   /*
     simple_xxxxx is set if ORDER/GROUP BY doesn't include any references
     to other tables than the first non-constant table in the JOIN.

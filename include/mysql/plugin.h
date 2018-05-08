@@ -118,12 +118,19 @@ typedef struct st_mysql_xid MYSQL_XID;
 #define PLUGIN_LICENSE_GPL_STRING "GPL"
 #define PLUGIN_LICENSE_BSD_STRING "BSD"
 
+/* definitions of code maturity for plugins */
+#define MariaDB_PLUGIN_MATURITY_UNKNOWN 0
+#define MariaDB_PLUGIN_MATURITY_EXPERIMENTAL 1
+#define MariaDB_PLUGIN_MATURITY_ALPHA 2
+#define MariaDB_PLUGIN_MATURITY_BETA 3
+#define MariaDB_PLUGIN_MATURITY_GAMMA 4
+#define MariaDB_PLUGIN_MATURITY_STABLE 5
+
 /*
   Macros for beginning and ending plugin declarations.  Between
   mysql_declare_plugin and mysql_declare_plugin_end there should
   be a st_mysql_plugin struct for each plugin to be declared.
 */
-
 
 #ifndef MYSQL_DYNAMIC_PLUGIN
 #define __MYSQL_DECLARE_PLUGIN(NAME, VERSION, PSIZE, DECLS)                   \

@@ -900,6 +900,7 @@ enum class enum_explain_type
 class SELECT_LEX: public Sql_alloc
 {
 public:
+  SELECT_LEX();
   Item  *where_cond() const { return m_where_cond; }
   void   set_where_cond(Item *cond) { m_where_cond= cond; }
   Item  *having_cond() const { return m_having_cond; }

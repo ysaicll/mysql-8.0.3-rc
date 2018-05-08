@@ -325,6 +325,12 @@ public:
   bool send_result_set_metadata(List<Item> &list, uint flags) override;
   bool send_data(List<Item> &items) override;
   bool send_eof() override;
+#ifdef EMBEDDED_LIBRARY
+  void begin_dataset()
+  {
+    protocol.begin_dataset();
+  }
+#endif
 };
 
 

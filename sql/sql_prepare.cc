@@ -164,7 +164,11 @@ using std::max;
 using std::min;
 
 /****************************************************************************/
-
+/*
+ A result class used to send cursor rows using the binary protocol.
+*/
+// Infinidb vtable processing
+extern int idb_vtable_process(THD* thd, ulonglong old_optimizer_switch);
 /**
   Execute one SQL statement in an isolated context.
 */
@@ -2427,7 +2431,7 @@ Prepared_statement::Prepared_statement(THD *thd_arg)
   *last_error= '\0';
 }
 
-
+/*
 void Prepared_statement::close_cursor()
 {
   destroy(result);
@@ -2435,7 +2439,7 @@ void Prepared_statement::close_cursor()
   delete cursor;
   cursor= nullptr;
 }
-
+*/
 
 void Prepared_statement::setup_set_params()
 {
@@ -3159,6 +3163,12 @@ Prepared_statement::swap_prepared_statement(Prepared_statement *copy)
 bool Prepared_statement::execute(String *expanded_query, bool open_cursor)
 {
   Query_arena *old_stmt_arena;
+  //InfiniDB
+  TABLE_LIST* global_list = NULL;
+  TABLE_LIST* view_list = NULL;
+  bool bHasInfiniDB = false;
+  ulonglong old_optimizer_switch = thd->variables.optimizer_switch;
+
   char saved_cur_db_name_buf[NAME_LEN+1];
   LEX_STRING saved_cur_db_name=
     { saved_cur_db_name_buf, sizeof(saved_cur_db_name_buf) };
@@ -3250,7 +3260,62 @@ bool Prepared_statement::execute(String *expanded_query, bool open_cursor)
     stmt_backup.restore_thd(thd, this);
     return TRUE;
   }
+   /*----------------------------InfiniDB-----------------------------*/
+   //vtable process around stmt_execute.
+   //check infinidb table
+   //Check global tables for IDB table. If no IDB tables involved, redo this query with normal path.
+   for (global_list = thd->lex->query_tables; global_list; global_list = global_list->next_global)
+   {
+     if (global_list->derived || global_list->schema_table)
+        continue;
 
+     if (global_list->view)
+    {
+      view_list = global_list->view->query_tables;
+      for (; view_list; view_list = view_list->next_global)
+      {
+        if (!(view_list->table && view_list->table->s && view_list->table->s->db_plugin))
+          continue;
+        if (view_list->table && view_list->table->isInfiniDB())
+        {
+          bHasInfiniDB = true;
+          break;
+        }
+      }
+      if (bHasInfiniDB)
+        break;
+    }
+   
+      if (!(global_list->table && global_list->table->s && global_list->table->s->db_plugin))
+          continue;
+      if (global_list->table && global_list->table->isInfiniDB())
+    {
+      bHasInfiniDB = true;
+      break;
+    }
+  }
+
+  if ((bHasInfiniDB && thd->get_command() == COM_STMT_EXECUTE) || (thd->lex->sql_command == SQLCOM_CALL))
+  {
+
+    thd->m_reprepare_observer = NULL;
+    if (thd->lex)
+      thd->lex->result = 0;
+
+   flags&= ~ (uint) IS_IN_USE;
+    if (idb_vtable_process(thd, old_optimizer_switch)) // if failed, fall through to normal path
+    {
+      thd->infinidb_vtable.vtable_state = THD::INFINIDB_DISABLE_VTABLE;
+    }
+    else
+    {
+      //delete_explain_query(thd->lex);
+      //thd->set_statement(&stmt_backup);
+      return false;
+    }
+
+  }
+/*---------------------------------InfiniDB End------------------------------------------------*/
   /*
     At first execution of prepared statement we may perform logical
     transformations of the query tree. Such changes should be performed
@@ -3390,8 +3455,12 @@ void Prepared_statement::deallocate()
   /* Statement map calls delete stmt on erase */
   thd->stmt_map.erase(this);
 }
-
-
+//InfiniDB This can't be declared inline in the header because curser isn't fully defined there.
+void Prepared_statement::close_cursor()
+{
+	delete cursor; 
+        cursor= 0;
+}
 /***************************************************************************
 * Ed_result_set
 ***************************************************************************/

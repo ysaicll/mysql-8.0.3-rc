@@ -355,7 +355,8 @@ public:
     See also THD::emb_on_expr_nest.
   */
   TABLE_LIST *embedding_join_nest;
-
+  Item_in_optimizer *optimizer;
+  const Item_in_optimizer* getOptimizer() const { return optimizer; } // @InfiniDB
   Item_exists_subselect(SELECT_LEX *select);
 
   Item_exists_subselect()

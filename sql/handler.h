@@ -482,6 +482,11 @@ enum enum_alter_inplace_result {
 #define HA_SUPPORTS_GEOGRAPHIC_GEOMETRY_COLUMN (1LL << 50)
 
 /*
+ *This storage engine supports condition pushdown
+ * */
+#define HA_CAN_TABLE_CONDITION_PUSHDOWN (1ULL << 41)
+
+/*
   Bits in index_flags(index_number) for what you can do with index.
   If you do not implement indexes, just return zero here.
 */

@@ -42,6 +42,7 @@
 #include "sql/current_thd.h"
 #include "sql/derror.h"      // ER_THD
 #include "sql/error_handler.h" // Internal_error_handler
+#include "sql/enum_query_type.h" //InfiniDB
 #include "sql/item_cmpfunc.h" // COND_EQUAL
 #include "sql/item_create.h" // create_temporal_literal
 #include "sql/item_func.h"   // item_func_sleep_init
@@ -2921,7 +2922,46 @@ void Item_ident::print(String *str, enum_query_type query_type,
   THD *thd= current_thd;
   char d_name_buff[MAX_ALIAS_NAME], t_name_buff[MAX_ALIAS_NAME];
   const char *d_name= db_name_arg, *t_name= table_name_arg;
-
+  //InfiniDB 
+  if (query_type == QT_INFINIDB || query_type == QT_INFINIDB_NO_QUOTE || query_type == QT_INFINIDB_DERIVED)
+  {
+  	if (query_type != QT_INFINIDB_NO_QUOTE && query_type != QT_INFINIDB_DERIVED)
+  		str->append('`');
+  // print referencing view name for IDB post process
+  if (cached_table)
+  	{
+  		if (cached_table->db && strlen(cached_table->db) > 0)
+	  	{
+					str->append(cached_table->db, (uint) strlen(cached_table->db));
+					str->append('.');
+			}
+                 // IDB: table referenced by view is represented by "viewAlias_tableAlias"
+                 if (cached_table->referencing_view && query_type != QT_INFINIDB_DERIVED)
+			{
+				str->append(cached_table->referencing_view->alias, (uint)strlen(cached_table->referencing_view->alias));
+				str->append("_");
+			}
+			str->append(cached_table->alias, (uint)strlen(cached_table->alias));
+			str->append('.');
+		}
+  	else
+  	{
+	  	if (d_name && strlen(d_name) > 0)
+	  	{
+	  		str->append(d_name, (uint) strlen(d_name));
+	  		str->append('.');
+	  	}
+	  	if (t_name && strlen(t_name) > 0)
+	  	{
+	  		str->append(t_name, (uint) strlen(t_name));
+	  		str->append('.');
+	  	}
+	  }
+  	str->append(field_name, (uint) strlen(field_name));
+  	if (query_type != QT_INFINIDB_NO_QUOTE && query_type != QT_INFINIDB_DERIVED)
+  		str->append('`');
+  	return;
+  }
   if (lower_case_table_names== 1 ||
       // mode '2' does not apply to aliases:
       (lower_case_table_names == 2 && !alias_name_used()))
@@ -6547,7 +6587,40 @@ bool Item::eq_by_collation(Item *item, bool binary_cmp,
 Field *Item::make_string_field(TABLE *table)
 {
   Field *field;
+  MEM_ROOT *mem_root= table->in_use->mem_root;
   DBUG_ASSERT(collation.collation);
+  //InfiniDB - pass thd here for vtable state checking. skip creating blob field for vtable creation.
+  bool skipBlob = false;
+  if (table->in_use)
+  {
+    if (table->in_use->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE)
+    {
+      skipBlob = true;
+    }
+    else
+    {
+      TABLE_LIST* global_list = table->in_use->lex->query_tables;
+      for (; global_list; global_list = global_list->next_global)
+      {
+        if (global_list->table && global_list->table->isInfiniDB())
+        {
+          skipBlob = true;
+          break;
+        }
+      }
+    }
+  }
+  else if (!table->in_use && type() == Item::SUM_FUNC_ITEM && ((Item_sum*)this)->thd() &&
+          ((Item_sum*)this)->thd()->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE)
+  {
+      skipBlob = true;
+  }
+
+  if (too_big_for_varchar() && !skipBlob)
+    field= new (mem_root)
+      Field_blob(max_length, maybe_null, name,
+                 collation.collation, TRUE);
+
   if (data_type() == MYSQL_TYPE_JSON)
     field= new (*THR_MALLOC) Field_json(max_length, maybe_null, item_name.ptr());
   else if (max_length/collation.collation->mbmaxlen > CONVERT_IF_BIGGER_TO_BLOB)

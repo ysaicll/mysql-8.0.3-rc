@@ -536,6 +536,8 @@ extern PSI_stage_info stage_rpl_apply_row_evt_delete;
 extern PSI_stage_info stage_sorting_for_group;
 extern PSI_stage_info stage_sorting_for_order;
 extern PSI_stage_info stage_sorting_result;
+extern PSI_stage_info stage_sorting;
+extern PSI_stage_info stage_enabling_keys;
 extern PSI_stage_info stage_sql_thd_waiting_until_delay;
 extern PSI_stage_info stage_statistics;
 extern PSI_stage_info stage_storing_row_into_queue;

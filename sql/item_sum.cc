@@ -4767,7 +4767,14 @@ Item_func_group_concat::Item_func_group_concat(THD *thd,
   }
 }
 
-
+//@InfiniDB. Moved this function to .cc file to access select_lex.
+enum_field_types Item_func_group_concat::field_type() const
+{
+        if (too_big_for_varchar())
+	    return MYSQL_TYPE_BLOB;
+	else
+	    return MYSQL_TYPE_VARCHAR;
+}
 
 void Item_func_group_concat::cleanup()
 {

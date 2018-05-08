@@ -685,13 +685,13 @@ public:
 
   uchar		*ptr;			// Position to field in record
 
-private:
+public:
   /**
      Byte where the @c NULL bit is stored inside a record. If this Field is a
      @c NOT @c NULL field, this member is @c NULL.
   */
   uchar *m_null_ptr;
-
+private:
   /**
     Flag: if the NOT-NULL field can be temporary NULL.
   */
@@ -1897,7 +1897,7 @@ protected:
 
 class Field_num :public Field {
 public:
-  const uint8 dec;
+  uint8 dec;
   bool zerofill,unsigned_flag;	// Purify cannot handle bit fields
   Field_num(uchar *ptr_arg,uint32 len_arg, uchar *null_ptr_arg,
 	    uchar null_bit_arg, uchar auto_flags_arg,

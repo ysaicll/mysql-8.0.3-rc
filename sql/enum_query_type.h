@@ -67,6 +67,13 @@ enum enum_query_type
     don't reveal values.
   */
   QT_NO_DATA_EXPANSION= (1 << 10),
+  // InfiniDB post process to customerize item::print() functions. 
+  QT_INFINIDB=(1<<11),
+  // InfiniDB customized item:print() without quote delimiter
+  QT_INFINIDB_NO_QUOTE=(1<<12),
+  // InfiniDB for union view as derived table. no view name is appended to the table alias.
+  QT_INFINIDB_DERIVED=(1<<12)
+
 };
 
 

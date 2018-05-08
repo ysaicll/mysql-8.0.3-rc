@@ -854,9 +854,13 @@ void THD::init(void)
   session_tracker.init(this->charset());
   session_tracker.enable(this);
 
+  infinidb_vtable.init(); //InfiniDB
+
   owned_gtid.clear();
   owned_sid.clear();
   owned_gtid.dbug_print(NULL, "set owned_gtid (clear) in THD::init");
+  // @INFINIDB
+  infinidb_vtable.init();
 }
 
 

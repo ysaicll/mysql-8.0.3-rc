@@ -887,13 +887,14 @@ public:
                         this, name(), unsafe_flags));
     prelocking_ctx->set_stmt_unsafe_flags(unsafe_flags);
   }
-
+   //InfiniDB accessor
+   sp_pcontext* context() {return m_root_parsing_ctx;}
+   uint sp_elements() {return m_instructions.size();}
   /**
     @return root parsing context for this stored program.
   */
   sp_pcontext *get_root_parsing_context() const
   { return const_cast<sp_pcontext *> (m_root_parsing_ctx); }
-
   /**
     @return SP-persistent mem-root. Instructions and expressions are stored in
     its memory between executions.

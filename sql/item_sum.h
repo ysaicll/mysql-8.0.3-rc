@@ -394,7 +394,7 @@ protected:
     Used in execution of prepared statement to avoid re-resolve.
   */
   bool m_window_resolved;
-
+  Item **orig_args;
 private:
   /**
     Used in making ROLLUP. Set for the ROLLUP copies of the original
@@ -415,7 +415,7 @@ public:
 
   bool has_force_copy_fields() const { return force_copy_fields; }
   bool has_with_distinct()     const { return with_distinct; }
-
+  Item **get_orig_args() {return orig_args;}
   enum Sumfunctype
   {
     COUNT_FUNC,          // COUNT
@@ -1928,7 +1928,7 @@ C_MODE_END
 class Item_func_group_concat final : public Item_sum
 {
   typedef Item_sum super;
-
+  
   Temp_table_param *tmp_table_param;
   String result;
   String *separator;
@@ -1952,6 +1952,7 @@ class Item_func_group_concat final : public Item_sum
   uint arg_count_field;
   uint row_count;
   bool distinct;
+  ORDER **order;
   bool warning_for_row;
   bool always_null;
   bool force_copy_fields;
@@ -1982,9 +1983,16 @@ public:
   Item_func_group_concat(THD *thd, Item_func_group_concat *item);
   ~Item_func_group_concat();
 
+
+  enum_field_types field_type() const;
   bool itemize(Parse_context *pc, Item **res) override;
   void cleanup() override;
-
+  // @InfiniDB added interface
+  bool isDistinct() { return distinct; }
+  uint count_field() { return arg_count_field; }
+  ORDER** get_order() { return order; }
+  String* str_separator() { return separator; }
+  uint order_field() { return arg_count_order; }
   enum Sumfunctype sum_func() const override { return GROUP_CONCAT_FUNC; }
   const char *func_name() const override { return "group_concat"; }
   Item_result result_type() const override { return STRING_RESULT; }
@@ -2503,6 +2511,11 @@ private:
 */
 class Item_func_grouping: public Item_int_func
 {
+  bool distinct;
+  uint arg_count_field;
+  uint arg_count_order;
+  String *separator;
+  ORDER **order;
 public:
   Item_func_grouping(const POS &pos, PT_item_list *a): Item_int_func(pos,a) {}
   const char * func_name() const override { return "grouping"; }
@@ -2518,6 +2531,12 @@ public:
       set_aggregation();
   }
   void cleanup() override;
+// @InfiniDB added interface
+  bool isDistinct() { return distinct; }
+  uint count_field() { return arg_count_field; }
+  uint order_field() { return arg_count_order; }
+  String* str_separator() { return separator; }
+  ORDER** get_order() { return order; }
 };
 
 #endif /* ITEM_SUM_INCLUDED */

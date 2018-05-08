@@ -2628,6 +2628,7 @@ inline String* alloc_buffer(String *res,String *str,String *tmp_value,
 
 bool Item_func_repeat::resolve_type(THD *)
 {
+  //THD *thd = current_thd;
   if (agg_arg_charsets_for_string_result(collation, args, 1))
     return true;
   DBUG_ASSERT(collation.collation != NULL);
@@ -2635,6 +2636,15 @@ bool Item_func_repeat::resolve_type(THD *)
   {
     /* must be longlong to avoid truncation */
     longlong count= args[1]->val_int();
+   /* @InfiniDB TODO For negative count, MySQL returns empty string, IDB returns NULL.
+    set length to 0 so order by can go through*/
+    if (count < 0 && thd() && (thd()->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE ||
+        thd()->variables.infinidb_vtable_mode == 0))
+    {
+      max_length = 0;
+      maybe_null = 1;
+      return 0;
+    }
     if (args[1]->null_value)
       goto end;
 
@@ -2646,6 +2656,16 @@ bool Item_func_repeat::resolve_type(THD *)
     ulonglong char_length= (ulonglong) args[0]->max_char_length() * count;
     set_data_type_string(char_length);
     return false;
+  }
+  else
+  {
+     // @InfiniDB. For dynamic (column) count, IDB sets length 256 for order by to go through
+    if (thd() && (thd()->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE ||
+        thd()->variables.infinidb_vtable_mode == 0) )
+      max_length = 256;
+    else 
+      max_length= MAX_BLOB_WIDTH;
+    maybe_null= 1;
   }
 
 end:
@@ -2789,6 +2809,7 @@ err:
 
 bool Item_func_rpad::resolve_type(THD *)
 {
+  //THD *thd = current_thd;
   // Handle character set for args[0] and args[2].
   if (agg_arg_charsets_for_string_result(collation, &args[0], 2, 2))
     return true;
@@ -2804,6 +2825,16 @@ bool Item_func_rpad::resolve_type(THD *)
       char_length= INT_MAX32;
     set_data_type_string(char_length);
     return false;
+  }
+   else
+  {
+    // @InfiniDB. For dynamic (column) count, IDB sets length 256 for order by to go through
+    if (thd() && (thd()->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE ||
+        thd()->variables.infinidb_vtable_mode == 0) )
+      max_length = 256;
+    else 
+      max_length= MAX_BLOB_WIDTH;
+    maybe_null= 1;
   }
 
 end:
@@ -2916,6 +2947,7 @@ String *Item_func_rpad::val_str(String *str)
 
 bool Item_func_lpad::resolve_type(THD *)
 {
+  //THD *thd = current_thd;
   // Handle character set for args[0] and args[2].
   if (agg_arg_charsets_for_string_result(collation, &args[0], 2, 2))
     return true;
@@ -2933,6 +2965,17 @@ bool Item_func_lpad::resolve_type(THD *)
     set_data_type_string(char_length);
     return false;
   }
+   else
+   {
+   // @InfiniDB. For dynamic (column) count, IDB sets length 256 for order by to go through
+   if (thd() && (thd()->infinidb_vtable.vtable_state != THD::INFINIDB_DISABLE_VTABLE ||
+        thd()->variables.infinidb_vtable_mode == 0) )
+      max_length = 256;
+    else 
+      max_length= MAX_BLOB_WIDTH;
+    maybe_null= 1;
+   }
+
 
 end:
   set_data_type_string(uint32(MAX_BLOB_WIDTH));
